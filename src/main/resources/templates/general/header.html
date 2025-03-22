@@ -26,6 +26,9 @@
                 <!-- Search -->
                 <!-- ============================================================== -->
             </ul>
+            <form method="post" th:action="@{/manager/reset-db}">
+                <button class="btn btn-danger" id="reset-db-btn">Reset DB</button>
+            </form>
             <!-- ============================================================== -->
             <!-- User profile and search -->
             <!-- ============================================================== -->
@@ -73,3 +76,4 @@
         </div>
     </nav>
 </header>
+
