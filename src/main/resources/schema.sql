@@ -542,6 +542,42 @@ CREATE TABLE alert_rate(
     PRIMARY KEY(id)
 );
 
+# calculates a customer's total budget.
+CREATE VIEW total_budget_customer AS
+SELECT
+    customer.customer_id,
+    customer.name,
+    COALESCE(SUM(b.budget), 0) AS total_budget,
+    COALESCE(SUM(b.remaining_budget), 0) AS total_remaining_budget
+FROM customer
+    LEFT JOIN budgets b ON b.customer_id = customer.customer_id
+GROUP BY customer.customer_id, customer.name;
+
+CREATE VIEW total_expenses_lead AS
+SELECT
+    customer.customer_id,
+    COALESCE(SUM(exp.amount), 0) AS lead_expense
+FROM customer
+    LEFT JOIN trigger_lead tl ON tl.customer_id = customer.customer_id
+    LEFT JOIN expenses exp ON exp.lead_id = tl.lead_id
+GROUP BY customer.customer_id;
+
+CREATE VIEW total_expenses_ticket AS
+SELECT
+    customer.customer_id,
+    COALESCE(SUM(exp.amount), 0) AS ticket_expense
+FROM customer
+    LEFT JOIN trigger_ticket tt ON tt.customer_id = customer.customer_id
+    LEFT JOIN expenses exp ON exp.ticket_id = tt.ticket_id
+GROUP BY customer.customer_id;
+
+CREATE VIEW total_expenses AS
+SELECT
+    tel.customer_id,
+    COALESCE(tel.lead_expense, 0) + COALESCE(tet.ticket_expense, 0) AS total_expense
+FROM total_expenses_lead tel
+    LEFT JOIN total_expenses_ticket tet ON tel.customer_id = tet.customer_id;
+
 
 # TRIGGERS
 # prevents a new expenditure if it exceeds the remaining_budget.
@@ -586,4 +622,52 @@ BEGIN
         SET NEW.remaining_budget = NEW.budget;
     END IF;
 END;
+
+CREATE TRIGGER before_update_expense
+    BEFORE UPDATE ON expenses
+    FOR EACH ROW
+BEGIN
+    DECLARE remaining DECIMAL(18,2);
+
+    SELECT remaining_budget + OLD.amount INTO remaining
+    FROM budgets WHERE id = NEW.budget_id;
+
+    IF NEW.amount > remaining THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Budget overrun after modification!';
+    END IF;
+END;
+
+CREATE TRIGGER after_update_expense
+    AFTER UPDATE ON expenses
+    FOR EACH ROW
+BEGIN
+    UPDATE budgets
+    SET remaining_budget = remaining_budget + OLD.amount - NEW.amount
+    WHERE id = NEW.budget_id;
+END;
+
+CREATE TRIGGER before_update_budget
+    BEFORE UPDATE ON budgets
+    FOR EACH ROW
+BEGIN
+    DECLARE total_spent DECIMAL(18,2);
+
+    -- Recover total expenses already incurred on this budget
+    SELECT SUM(amount) INTO total_spent FROM expenses WHERE budget_id = OLD.id;
+
+    -- Check that the new budget is sufficient to cover past expenditure
+    IF NEW.budget < total_spent THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'It''s impossible to reduce the budget below existing expenditure!';
+    END IF;
+END;
+
+CREATE TRIGGER after_update_budget
+    AFTER UPDATE ON budgets
+    FOR EACH ROW
+BEGIN
+    UPDATE budgets
+    SET remaining_budget = NEW.budget - (SELECT COALESCE(SUM(amount), 0) FROM expenses WHERE budget_id = NEW.id)
+    WHERE id = NEW.id;
+END;
+
 
