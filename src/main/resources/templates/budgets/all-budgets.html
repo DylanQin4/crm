@@ -109,20 +109,20 @@
                                     </thead>
                                     <tbody>
                                     <tr th:if="${budgets != null}" th:each="budget : ${budgets}">
-                                        <td th:text="${budget.id}"></td>
+                                        <td th:text="${budget.budgetId}"></td>
                                         <td th:text="${budget.designation}"></td>
                                         <td th:text="${#numbers.formatDecimal(budget.budget, 1, 'COMMA', 2, 'POINT')}"></td>
                                         <td th:text="${#numbers.formatDecimal(budget.remainingBudget, 1, 'COMMA', 2, 'POINT')}"></td>
                                         <td th:text="${budget.dateMin}"></td>
                                         <td th:text="${budget.dateMax}"></td>
-                                        <td th:text="${budget.customerId}"></td>
+                                        <td th:text="${budget.customerName}"></td>
                                         <td>
-                                            <a th:href="@{|${home}manager/budgets/edit/${budget.id}|}">
+                                            <a th:href="@{|${home}manager/budgets/edit/${budget.budgetId}|}">
                                                 <i class="fas fa-edit"></i>
                                             </a>
                                         </td>
                                         <td>
-                                            <form th:action="@{|${home}manager/budgets/delete/${budget.id}|}" method="get">
+                                            <form th:action="@{|${home}manager/budgets/delete/${budget.budgetId}|}" method="get">
                                                 <button type="submit" class="btn btn-primary">
                                                     <i class="mdi mdi-delete"></i>
                                                 </button>

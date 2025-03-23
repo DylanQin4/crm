@@ -28,9 +28,6 @@ public class Budget {
     @Column(name = "budget", nullable = false, precision = 18, scale = 2)
     private BigDecimal budget;
 
-    @Column(name = "remaining_budget", nullable = false, precision = 18, scale = 2)
-    private BigDecimal remainingBudget;
-
     @DateTimeFormat(pattern = "yyyy-MM-dd")
     @Column(name = "date_min")
     private LocalDate dateMin;
