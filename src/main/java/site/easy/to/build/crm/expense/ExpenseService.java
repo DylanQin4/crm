@@ -62,4 +62,8 @@ public class ExpenseService {
         BigDecimal totalExpense = getTotalExpensesByBudget(budgetId);
         return budget.getBudget().subtract(totalExpense);
     }
+
+    public Expense findExpenseById(Integer id) {
+        return expenseRepository.findById(id).orElse(null);
+    }
 }

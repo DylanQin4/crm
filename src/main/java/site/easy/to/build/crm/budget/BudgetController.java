@@ -65,6 +65,12 @@ public class BudgetController {
         }
         model.addAttribute("customers", customerRepository.findAll());
         model.addAttribute("budgetx", budget);
+
+        boolean alertReached = budgetService.isAlertReached(id);
+        boolean budgetExceeded = budgetService.isBudgetExceeded(id);
+
+        model.addAttribute("alertReached", alertReached);
+        model.addAttribute("budgetExceeded", budgetExceeded);
         return "budgets/update-budget";
     }
 
