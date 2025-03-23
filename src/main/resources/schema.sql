@@ -1,4 +1,4 @@
---CREATE DATABASE  IF NOT EXISTS `crm` /*!40100 DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci */ /*!80016 DEFAULT ENCRYPTION='N' */;
+-- CREATE DATABASE  IF NOT EXISTS `crm` /*!40100 DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci */ /*!80016 DEFAULT ENCRYPTION='N' */;
 USE `crm`;
 
 -- MySQL dump 10.13  Distrib 8.0.33, for Win64 (x86_64)
@@ -505,3 +505,130 @@ CREATE TABLE IF NOT EXISTS `google_drive_file` (
 /*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
+
+
+CREATE TABLE budgets(
+    id INT AUTO_INCREMENT,
+    budget DECIMAL(18,2) NOT NULL,
+    date_min DATE,
+    date_max DATE,
+    designation VARCHAR(250),
+    status ENUM('ACTIVE', 'INACTIVE', 'SOLD_OUT') DEFAULT 'ACTIVE',
+    customer_id INT UNSIGNED NOT NULL,
+    PRIMARY KEY(id),
+    FOREIGN KEY(customer_id) REFERENCES customer(customer_id)
+);
+
+CREATE TABLE expenses(
+    id INT AUTO_INCREMENT,
+    amount DECIMAL(18,2) NOT NULL,
+    label VARCHAR(250),
+    date_expense DATE,
+    ticket_id INT UNSIGNED,
+    lead_id INT UNSIGNED,
+    customer_id INT UNSIGNED,
+    budget_id INT UNSIGNED NOT NULL,
+    PRIMARY KEY(id),
+    FOREIGN KEY(ticket_id) REFERENCES trigger_ticket(ticket_id),
+    FOREIGN KEY(lead_id) REFERENCES trigger_lead(lead_id)
+);
+
+CREATE TABLE alert_rate(
+    id INT AUTO_INCREMENT,
+    rate DECIMAL(5,2) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY(id)
+);
+
+
+CREATE TRIGGER before_insert_expense
+    BEFORE INSERT ON expenses
+    FOR EACH ROW
+BEGIN
+    DECLARE total_budget DECIMAL(18,2);
+    DECLARE total_expenses DECIMAL(18,2);
+
+    -- Récupérer le budget total
+    SELECT budget INTO total_budget FROM budgets WHERE id = NEW.budget_id;
+
+    -- Récupérer le total des dépenses déjà engagées
+    SELECT COALESCE(SUM(amount), 0) INTO total_expenses FROM expenses WHERE budget_id = NEW.budget_id;
+
+    -- Vérifier si la nouvelle dépense dépasse le budget restant
+    IF (total_expenses + NEW.amount) > total_budget THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Dépassement du budget !';
+    END IF;
+END;
+
+CREATE TRIGGER before_update_expense
+    BEFORE UPDATE ON expenses
+    FOR EACH ROW
+BEGIN
+    DECLARE total_budget DECIMAL(18,2);
+    DECLARE total_expenses DECIMAL(18,2);
+
+    -- Récupérer le budget total
+    SELECT budget INTO total_budget FROM budgets WHERE id = NEW.budget_id;
+
+    -- Récupérer le total des dépenses déjà engagées (en excluant l'ancienne valeur de la dépense en cours de modification)
+    SELECT COALESCE(SUM(amount), 0) INTO total_expenses
+    FROM expenses
+    WHERE budget_id = NEW.budget_id AND id != OLD.id;
+
+    -- Vérifier si la nouvelle dépense dépasse le budget restant
+    IF (total_expenses + NEW.amount) > total_budget THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Budget overrun after modification!';
+    END IF;
+END;
+
+CREATE TRIGGER before_update_budget
+    BEFORE UPDATE ON budgets
+    FOR EACH ROW
+BEGIN
+    DECLARE total_spent DECIMAL(18,2);
+
+    -- Récupérer le total des dépenses déjà engagées
+    SELECT COALESCE(SUM(amount), 0) INTO total_spent FROM expenses WHERE budget_id = OLD.id;
+
+    -- Vérifier que le nouveau budget est suffisant pour couvrir les dépenses existantes
+    IF NEW.budget < total_spent THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'It''s impossible to reduce the budget below existing expenditure!';
+    END IF;
+END;
+
+CREATE VIEW budget_customer AS
+SELECT
+    b.id AS budget_id,
+    b.designation,
+    b.date_min,
+    b.date_max,
+    b.status,
+    c.customer_id,
+    c.name AS customer_name,
+    b.budget,
+    b.budget - COALESCE(SUM(e.amount), 0) AS remaining_budget
+FROM budgets b
+    JOIN crm.customer c ON b.customer_id = c.customer_id
+    LEFT JOIN expenses e ON e.budget_id = b.id
+GROUP BY
+    b.id,
+    b.designation,
+    b.date_min,
+    b.date_max,
+    b.status,
+    c.customer_id,
+    c.name,
+    b.budget;
+
+
+CREATE VIEW total_budget_customer AS
+SELECT
+    customer.customer_id,
+    customer.name,
+    COALESCE(SUM(b.budget), 0) AS total_budget,
+    COALESCE(SUM(b.budget) - COALESCE(SUM(exp.amount), 0), 0) AS total_remaining_budget
+FROM customer
+    LEFT JOIN budgets b ON b.customer_id = customer.customer_id
+    LEFT JOIN expenses exp ON exp.budget_id = b.id
+GROUP BY customer.customer_id, customer.name;
