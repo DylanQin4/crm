@@ -61,15 +61,9 @@ public class GoogleCalendarApiServiceImpl implements GoogleCalendarApiService {
                 .map(event -> {
                     EventDateTime start = event.getStart();
                     EventDateTime end = event.getEnd();
-//                    Map<String, String> startDateTimeParts = TimeDateUtil.extractDateTime(start.getDateTime());
-//                    Map<String, String> endDateTimeParts = TimeDateUtil.extractDateTime(end.getDateTime());
+                    Map<String, String> startDateTimeParts = TimeDateUtil.extractDateTime(start.getDateTime());
+                    Map<String, String> endDateTimeParts = TimeDateUtil.extractDateTime(end.getDateTime());
 
-                    Map<String, String> startDateTimeParts = start != null && start.getDateTime() != null
-                            ? TimeDateUtil.extractDateTime(start.getDateTime())
-                            : Map.of("date", "", "time", "", "timeZone", "");
-                    Map<String, String> endDateTimeParts = end != null && end.getDateTime() != null
-                            ? TimeDateUtil.extractDateTime(end.getDateTime())
-                            : Map.of("date", "", "time", "", "timeZone", "");
                     return new EventDisplay(
                             event.getId(),
                             event.getSummary(),
