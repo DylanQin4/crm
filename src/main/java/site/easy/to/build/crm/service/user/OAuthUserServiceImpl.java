@@ -1,5 +1,6 @@
 package site.easy.to.build.crm.service.user;
 
+import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
 import com.google.api.client.googleapis.auth.oauth2.GoogleRefreshTokenRequest;
 import com.google.api.client.googleapis.auth.oauth2.GoogleTokenResponse;
 import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport;
@@ -12,7 +13,11 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.security.oauth2.core.OAuth2AccessToken;
 import org.springframework.security.oauth2.core.OAuth2RefreshToken;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import site.easy.to.build.crm.entity.Role;
+import site.easy.to.build.crm.entity.UserProfile;
 import site.easy.to.build.crm.repository.OAuthUserRepository;
+import site.easy.to.build.crm.repository.RoleRepository;
 import site.easy.to.build.crm.repository.UserRepository;
 import site.easy.to.build.crm.entity.OAuthUser;
 import site.easy.to.build.crm.entity.User;
@@ -20,6 +25,10 @@ import site.easy.to.build.crm.entity.User;
 import java.io.IOException;
 import java.security.GeneralSecurityException;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
 
 @Service
 public class OAuthUserServiceImpl implements OAuthUserService{
@@ -47,6 +56,8 @@ public class OAuthUserServiceImpl implements OAuthUserService{
 
     @Autowired
     UserRepository userRepository;
+    @Autowired
+    private RoleRepository roleRepository;
 
     @Override
     public OAuthUser findById(int id) {
@@ -144,6 +155,18 @@ public class OAuthUserServiceImpl implements OAuthUserService{
             oAuthUser.setRefreshTokenIssuedAt(oAuth2RefreshToken.getIssuedAt());
             oAuthUser.setRefreshTokenExpiration(oAuth2RefreshToken.getExpiresAt());
         }
+    }
+
+    @Override
+    @Transactional
+    public User processGoogleUser(String email, GoogleIdToken.Payload payload) {
+        // Check if user exists
+        User existingUser = userRepository.findByEmail(email);
+
+        if (existingUser != null) {
+            return existingUser;
+        }
+        return null;
     }
 
 }
