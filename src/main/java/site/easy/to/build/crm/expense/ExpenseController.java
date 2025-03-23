@@ -5,15 +5,21 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
+import site.easy.to.build.crm.budget.Budget;
 import site.easy.to.build.crm.budget.BudgetService;
+import site.easy.to.build.crm.entity.Lead;
+import site.easy.to.build.crm.entity.Ticket;
 import site.easy.to.build.crm.repository.CustomerRepository;
 import site.easy.to.build.crm.service.lead.LeadService;
 import site.easy.to.build.crm.service.ticket.TicketService;
 import site.easy.to.build.crm.util.AuthenticationUtils;
 
 import javax.validation.Valid;
+import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Controller
 @RequestMapping("/employee/expenses")
@@ -70,10 +76,16 @@ public class ExpenseController {
             expense.setBudget(budgetService.getBudgetById(budgetId));
         }
 
+        boolean isManager = authentication.getAuthorities().stream()
+                .anyMatch(auth -> auth.getAuthority().equals("ROLE_MANAGER"));
+
+        List<Ticket> tickets = isManager ? ticketService.getAllTickets() : ticketService.findEmployeeTickets(userId);
+        List<Lead> leads = isManager ? leadService.getAllLeads() : leadService.findAssignedLeads(userId);
+
         model.addAttribute("expense", expense);
         model.addAttribute("budgets", budgetService.getAllBudgets());
-        model.addAttribute("tickets", ticketService.findEmployeeTickets(userId));
-        model.addAttribute("leads", leadService.findAssignedLeads(userId));
+        model.addAttribute("tickets", tickets);
+        model.addAttribute("leads", leads);
         return "expenses/create-expense";
     }
 
@@ -111,10 +123,16 @@ public class ExpenseController {
             return "error/not-found";
         }
 
+        boolean isManager = authentication.getAuthorities().stream()
+                .anyMatch(auth -> auth.getAuthority().equals("ROLE_MANAGER"));
+
+        List<Ticket> tickets = isManager ? ticketService.getAllTickets() : ticketService.findEmployeeTickets(userId);
+        List<Lead> leads = isManager ? leadService.getAllLeads() : leadService.findAssignedLeads(userId);
+
         model.addAttribute("expense", expense);
         model.addAttribute("budgets", budgetService.getAllBudgets());
-        model.addAttribute("tickets", ticketService.findEmployeeTickets(userId));
-        model.addAttribute("leads", leadService.findAssignedLeads(userId));
+        model.addAttribute("tickets", tickets);
+        model.addAttribute("leads", leads);
         return "expenses/update-expense";
     }
 
@@ -127,10 +145,17 @@ public class ExpenseController {
         if(userId == -1) {
             return "error/not-found";
         }
+
+        boolean isManager = authentication.getAuthorities().stream()
+                .anyMatch(auth -> auth.getAuthority().equals("ROLE_MANAGER"));
+
+        List<Ticket> tickets = isManager ? ticketService.getAllTickets() : ticketService.findEmployeeTickets(userId);
+        List<Lead> leads = isManager ? leadService.getAllLeads() : leadService.findAssignedLeads(userId);
+
         if (bindingResult.hasErrors()) {
             model.addAttribute("budgets", budgetService.getAllBudgets());
-            model.addAttribute("tickets", ticketService.findEmployeeTickets(userId));
-            model.addAttribute("leads", leadService.findAssignedLeads(userId));
+            model.addAttribute("tickets", tickets);
+            model.addAttribute("leads", leads);
             return "expenses/update-expense";
         }
 
@@ -140,8 +165,8 @@ public class ExpenseController {
         } catch (Exception e) {
             bindingResult.rejectValue("amount", "error.expense", "Budget limit exceeded");
             model.addAttribute("budgets", budgetService.getAllBudgets());
-            model.addAttribute("tickets", ticketService.findEmployeeTickets(userId));
-            model.addAttribute("leads", leadService.findAssignedLeads(userId));
+            model.addAttribute("tickets", tickets);
+            model.addAttribute("leads", leads);
             return "expenses/update-expense";
         }
     }

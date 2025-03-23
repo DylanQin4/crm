@@ -539,62 +539,8 @@ CREATE TABLE alert_rate(
     updated_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY(id)
 );
+INSERT INTO alert_rate (rate) VALUES (0.8); -- 80%
 
-
-CREATE TRIGGER before_insert_expense
-    BEFORE INSERT ON expenses
-    FOR EACH ROW
-BEGIN
-    DECLARE total_budget DECIMAL(18,2);
-    DECLARE total_expenses DECIMAL(18,2);
-
-    -- Récupérer le budget total
-    SELECT budget INTO total_budget FROM budgets WHERE id = NEW.budget_id;
-
-    -- Récupérer le total des dépenses déjà engagées
-    SELECT COALESCE(SUM(amount), 0) INTO total_expenses FROM expenses WHERE budget_id = NEW.budget_id;
-
-    -- Vérifier si la nouvelle dépense dépasse le budget restant
-    IF (total_expenses + NEW.amount) > total_budget THEN
-        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Dépassement du budget !';
-    END IF;
-END;
-
-CREATE TRIGGER before_update_expense
-    BEFORE UPDATE ON expenses
-    FOR EACH ROW
-BEGIN
-    DECLARE total_budget DECIMAL(18,2);
-    DECLARE total_expenses DECIMAL(18,2);
-
-    -- Récupérer le budget total
-    SELECT budget INTO total_budget FROM budgets WHERE id = NEW.budget_id;
-
-    -- Récupérer le total des dépenses déjà engagées (en excluant l'ancienne valeur de la dépense en cours de modification)
-    SELECT COALESCE(SUM(amount), 0) INTO total_expenses
-    FROM expenses
-    WHERE budget_id = NEW.budget_id AND id != OLD.id;
-
-    -- Vérifier si la nouvelle dépense dépasse le budget restant
-    IF (total_expenses + NEW.amount) > total_budget THEN
-        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Budget overrun after modification!';
-    END IF;
-END;
-
-CREATE TRIGGER before_update_budget
-    BEFORE UPDATE ON budgets
-    FOR EACH ROW
-BEGIN
-    DECLARE total_spent DECIMAL(18,2);
-
-    -- Récupérer le total des dépenses déjà engagées
-    SELECT COALESCE(SUM(amount), 0) INTO total_spent FROM expenses WHERE budget_id = OLD.id;
-
-    -- Vérifier que le nouveau budget est suffisant pour couvrir les dépenses existantes
-    IF NEW.budget < total_spent THEN
-        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'It''s impossible to reduce the budget below existing expenditure!';
-    END IF;
-END;
 
 CREATE VIEW budget_customer AS
 SELECT

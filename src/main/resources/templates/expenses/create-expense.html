@@ -36,8 +36,23 @@
                 <div class="col-lg-12">
                     <div class="card">
                         <div class="card-body">
-                            <h4 class="card-title">Create New Expense</h4>
+                            <h4 class="card-title">Update Expense</h4>
+
+                            <!-- Budget Overrun Warning -->
+                            <div th:if="${budgetExceeded}" class="alert alert-warning">
+                                ⚠ Warning: This expense will exceed the remaining budget! Please confirm to proceed.
+                            </div>
+
+                            <!-- Display validation errors -->
+                            <div class="alert alert-danger" th:if="${#fields.hasErrors('expense.*')}" role="alert">
+                                <span th:each="err : ${#fields.errors('expense.*')}" th:text="${err}"></span>
+                            </div>
+
                             <form th:object="${expense}" th:action="@{/employee/expenses/save}" method="post">
+                                <input type="hidden" name="id" id="id" th:field="*{id}">
+
+                                <!-- Add a hidden field to track confirmation -->
+                                <input type="hidden" name="budgetExceededConfirmed" th:value="${budgetExceededConfirmed != null ? budgetExceededConfirmed : false}">
 
                                 <label class="m-t-20" for="amount">Amount:</label>
                                 <div class="input-group">
@@ -67,9 +82,9 @@
                                 <div class="input-group">
                                     <select id="budget" th:field="*{budget}" class="form-control">
                                         <option value="">Select Budget</option>
-                                        <option th:each="budget : ${budgets}"
-                                                th:value="${budget.budgetId}"
-                                                th:text="${budget.designation + ' - ' + budget.customerName + ' (' + budget.remainingBudget + ')'}">
+                                        <option th:each="budgetOption : ${budgets}"
+                                                th:value="${budgetOption.budgetId}"
+                                                th:text="${budgetOption.designation + ' - ' + budgetOption.customerName + ' (' + budgetOption.remainingBudget + ')'}">
                                         </option>
                                     </select>
                                 </div>
@@ -106,12 +121,19 @@
                                 <div class="row">
                                     <div class="col-12">
                                         <span class="text-danger font-weight-bold"
-                                              th:if="${#fields.hasErrors('ticketId') or #fields.hasErrors('leadId')}"
+                                              th:if="${#fields.hasErrors('ticketId') || #fields.hasErrors('leadId')}"
                                               th:text="'Please select either a Ticket or a Lead'"></span>
                                     </div>
                                 </div>
 
-                                <button type="submit" class="btn btn-primary m-t-20">Create Expense</button>
+                                <!-- Show different buttons based on budget exceeded status -->
+                                <div th:if="${budgetExceeded != null && budgetExceeded && (budgetExceededConfirmed == null || !budgetExceededConfirmed)}">
+                                    <button type="submit" name="confirm" value="true" class="btn btn-warning m-t-20">Confirm Anyway</button>
+                                    <a th:href="@{/manager/expenses}" class="btn btn-secondary m-t-20">Cancel</a>
+                                </div>
+                                <div th:unless="${budgetExceeded != null && budgetExceeded && (budgetExceededConfirmed == null || !budgetExceededConfirmed)}">
+                                    <button type="submit" class="btn btn-primary m-t-20">Create Expense</button>
+                                </div>
                             </form>
                         </div>
                     </div>
@@ -135,17 +157,102 @@
 <script th:inline="javascript">
     var home = /*[[${home}]]*/ null;
 </script>
-<script th:src="@{/js/library/jquery-3.2.1.min.js}" type="text/javascript">></script>
-<script th:src="@{/js/library/popper.min.js}" type="text/javascript">></script>
-<script th:src="@{/js/library/bootstrap.min.js}" type="text/javascript">></script>
-<script th:src="@{/js/library/perfect-scrollbar.jquery.min.js}" type="text/javascript">></script>
-<script th:src="@{/js/library/waves.js}" type="text/javascript">></script>
-<script th:src="@{/js/library/sidebarmenu.js}" type="text/javascript">></script>
+<script th:src="@{/js/library/jquery-3.2.1.min.js}" type="text/javascript"></script>
+<script th:src="@{/js/library/popper.min.js}" type="text/javascript"></script>
+<script th:src="@{/js/library/bootstrap.min.js}" type="text/javascript"></script>
+<script th:src="@{/js/library/perfect-scrollbar.jquery.min.js}" type="text/javascript"></script>
+<script th:src="@{/js/library/waves.js}" type="text/javascript"></script>
+<script th:src="@{/js/library/sidebarmenu.js}" type="text/javascript"></script>
 <script th:src="@{/js/library/sticky-kit.min.js}"></script>
-<script th:src="@{/js/library/jquery.sparkline.min.js}" type="text/javascript">></script>
-<script th:src="@{/js/library/custom.min.js}" type="text/javascript">></script>
+<script th:src="@{/js/library/jquery.sparkline.min.js}" type="text/javascript"></script>
+<script th:src="@{/js/library/custom.min.js}" type="text/javascript"></script>
 <script th:src="@{/js/library/wysihtml5-0.3.0.js}"></script>
 <script th:src="@{/js/library/bootstrap-wysihtml5.js}"></script>
 
+<!-- Client-side validation -->
+<script>
+    $(document).ready(function() {
+        // Form validation
+        $('form').submit(function(event) {
+            var ticketId = $('#ticketId').val();
+            var leadId = $('#leadId').val();
+
+            if (!ticketId && !leadId) {
+                alert('Please select either a Ticket or a Lead');
+                event.preventDefault();
+            }
+        });
+
+        // Budget warning with confirmation dialog
+        $('#budget, #amount').change(function() {
+            // Remove any existing warnings
+            $('.budget-warning').remove();
+
+            var budgetId = $('#budget').val();
+            var amount = parseFloat($('#amount').val() || 0);
+
+            if (budgetId && amount) {
+                // Get the selected option
+                var selectedOption = $('#budget option:selected');
+                var budgetText = selectedOption.text();
+
+                // Extract remaining budget from the option text
+                // Format is: "designation - customerName (remainingAmount)"
+                var remainingMatch = budgetText.match(/\(([^)]+)\)/);
+                if (remainingMatch && remainingMatch.length > 1) {
+                    var remainingBudget = parseFloat(remainingMatch[1].replace(/[^\d.-]/g, ''));
+
+                    // Show visual indication if budget would be exceeded
+                    if (amount > remainingBudget) {
+                        $('#budget').after('<div class="alert alert-warning budget-warning mt-2">' +
+                            '⚠ Warning: This expense will exceed the budget limit.</div>');
+                    }
+                }
+            }
+        });
+
+        // Form submission with budget confirmation
+        $('form').submit(function(event) {
+            var ticketId = $('#ticketId').val();
+            var leadId = $('#leadId').val();
+
+            // Check if either ticket or lead is selected
+            if (!ticketId && !leadId) {
+                alert('Please select either a Ticket or a Lead');
+                event.preventDefault();
+                return false;
+            }
+
+            // Check budget limit
+            var budgetId = $('#budget').val();
+            var amount = parseFloat($('#amount').val() || 0);
+
+            if (budgetId && amount) {
+                var selectedOption = $('#budget option:selected');
+                var budgetText = selectedOption.text();
+                var remainingMatch = budgetText.match(/\(([^)]+)\)/);
+
+                if (remainingMatch && remainingMatch.length > 1) {
+                    var remainingBudget = parseFloat(remainingMatch[1].replace(/[^\d.-]/g, ''));
+
+                    // If amount exceeds budget and not yet confirmed, show confirmation dialog
+                    if (amount > remainingBudget && !$(this).data('confirmed')) {
+                        if (confirm('This expense will exceed the remaining budget. Do you want to proceed anyway?')) {
+                            // Set confirmed flag and resubmit
+                            $(this).data('confirmed', true);
+                            $('input[name="budgetExceededConfirmed"]').val(true);
+                            return true;
+                        } else {
+                            event.preventDefault();
+                            return false;
+                        }
+                    }
+                }
+            }
+
+            return true;
+        });
+    });
+</script>
 </body>
 </html>
