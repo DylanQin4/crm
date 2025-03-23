@@ -16,9 +16,19 @@ Before installing the CRM application, ensure the following:
 To install and run the CRM application, follow these steps:
 
 1. Clone the repository from GitHub.
-2. Create a file .env from .env.example and fill in the required details.
+2. Configure the MySQL database connection details in the `application.properties` file:
 
-3. **Set up the necessary Google API credentials for Google integration:**
+```
+spring.datasource.url=jdbc:mysql://localhost:3306/crm?createDatabaseIfNotExist=true
+spring.datasource.username=YourUserName
+spring.datasource.password=YourPassword
+spring.jpa.hibernate.ddl-auto=none
+spring.sql.init.mode=always
+```
+
+Replace `YourUserName` and `YourPassword` with your MySQL database credentials.
+
+1. **Set up the necessary Google API credentials for Google integration:**
     - Go to the [Google Cloud Console](https://console.cloud.google.com/).
     - Create a new project or select an existing project.
     - Enable the necessary APIs for your project (e.g., Google Drive, Gmail, Calendar).
@@ -31,7 +41,7 @@ To install and run the CRM application, follow these steps:
         - `http://localhost:8080/employee/settings/handle-granted-access`
         Replace `localhost:8080` with the base URL of your CRM application.
     - Complete the setup and note down the **Client ID** and **Client Secret**.
-4. **Modify the Google API scopes for accessing Google services**:
+2. **Modify the Google API scopes for accessing Google services**:
     
     While setting up the Google API credentials, you need to add the required scopes to define the level of access the application has to your Google account. The required scopes depend on the specific features you want to use. Here are the scopes for common Google services:
     
@@ -48,7 +58,7 @@ To install and run the CRM application, follow these steps:
         ![restricted scopes](https://github.com/wp-ahmed/crm/assets/54330098/b76a5cf8-c342-42e9-9848-6d0844f83575)
 
         
-5. **Configure the redirect URI for the Google authentication flow:**
+3. **Configure the redirect URI for the Google authentication flow:**
 
 ```
 spring.security.oauth2.client.registration.google.redirect-uri={baseUrl}/login/oauth2/code/{registrationId}
