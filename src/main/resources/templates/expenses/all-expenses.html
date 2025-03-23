@@ -46,7 +46,7 @@
                         <div class="card-body">
                             <h4 class="card-title">Expenses</h4>
                             <div class="m-t-40">
-                                <form th:action="@{/manager/expenses}" method="get" class="d-flex gap-2">
+                                <form th:action="@{/employee/expenses}" method="get" class="d-flex gap-2">
                                     <div class="form-group mb-0 mr-2">
                                         <label for="budgetId" class="form-label">Budgets</label>
                                         <select id="budgetId" name="budgetId" class="form-select">
@@ -59,7 +59,7 @@
                                         </select>
                                     </div>
                                     <button type="submit" class="btn btn-primary align-self-end">Filter</button>
-                                    <a th:href="@{/manager/expenses/new}" class="btn btn-success align-self-end ml-2">
+                                    <a th:href="@{/employee/expenses/new}" class="btn btn-success align-self-end ml-2">
                                         Create New Expense
                                     </a>
                                 </form>
@@ -85,12 +85,12 @@
                                         <td th:text="${expense.dateExpense}"></td>
                                         <td th:text="${expense.budget.designation}"></td>
                                         <td>
-                                            <a th:href="@{|${home}manager/expenses/edit/${expense.id}|}">
+                                            <a th:href="@{|${home}employee/expenses/edit/${expense.id}|}">
                                                 <i class="fas fa-edit"></i>
                                             </a>
                                         </td>
                                         <td>
-                                            <form th:action="@{|${home}manager/expenses/delete/${expense.id}|}" method="get">
+                                            <form th:action="@{|${home}employee/expenses/delete/${expense.id}|}" method="get">
                                                 <input type="hidden" name="budgetId" th:value="${budgetId}" />
                                                 <button type="submit" class="btn btn-primary">
                                                     <i class="mdi mdi-delete"></i>

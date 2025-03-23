@@ -1,5 +1,6 @@
 package site.easy.to.build.crm.expense;
 
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
@@ -8,13 +9,14 @@ import site.easy.to.build.crm.budget.BudgetService;
 import site.easy.to.build.crm.repository.CustomerRepository;
 import site.easy.to.build.crm.service.lead.LeadService;
 import site.easy.to.build.crm.service.ticket.TicketService;
+import site.easy.to.build.crm.util.AuthenticationUtils;
 
 import javax.validation.Valid;
 import java.time.LocalDate;
 import java.util.List;
 
 @Controller
-@RequestMapping("/manager/expenses")
+@RequestMapping("/employee/expenses")
 public class ExpenseController {
 
     private final ExpenseService expenseService;
@@ -22,15 +24,17 @@ public class ExpenseController {
     private final CustomerRepository customerRepository;
     private final TicketService ticketService;
     private final LeadService leadService;
+    private final AuthenticationUtils authenticationUtils;
 
     public ExpenseController(ExpenseService expenseService,
                              BudgetService budgetService,
-                             CustomerRepository customerRepository, TicketService ticketService, LeadService leadService) {
+                             CustomerRepository customerRepository, TicketService ticketService, LeadService leadService, AuthenticationUtils authenticationUtils) {
         this.expenseService = expenseService;
         this.budgetService = budgetService;
         this.customerRepository = customerRepository;
         this.ticketService = ticketService;
         this.leadService = leadService;
+        this.authenticationUtils = authenticationUtils;
     }
 
     @GetMapping
@@ -53,9 +57,14 @@ public class ExpenseController {
 
     @GetMapping("/new")
     public String showCreateForm(@RequestParam(value = "budgetId", required = false) Integer budgetId,
-                                 Model model) {
+                                 Model model,
+                                 Authentication authentication) {
+        int userId = authenticationUtils.getLoggedInUserId(authentication);
+        if(userId == -1) {
+            return "error/not-found";
+        }
         Expense expense = new Expense();
-        expense.setDateExpense(LocalDate.now());
+
 
         if (budgetId != null) {
             expense.setBudget(budgetService.getBudgetById(budgetId));
@@ -63,8 +72,8 @@ public class ExpenseController {
 
         model.addAttribute("expense", expense);
         model.addAttribute("budgets", budgetService.getAllBudgets());
-        model.addAttribute("tickets", ticketService.getAllTickets());
-        model.addAttribute("leads", leadService.getAllLeads());
+        model.addAttribute("tickets", ticketService.findEmployeeTickets(userId));
+        model.addAttribute("leads", leadService.findAssignedLeads(userId));
         return "expenses/create-expense";
     }
 
@@ -80,7 +89,7 @@ public class ExpenseController {
 
         try {
             expenseService.createExpense(expense);
-            return "redirect:/manager/expenses?budgetId=" + expense.getBudget().getId();
+            return "redirect:/employee/expenses?budgetId=" + expense.getBudget().getId();
         } catch (Exception e) {
             bindingResult.rejectValue("amount", "error.expense", "Budget limit exceeded");
             model.addAttribute("budgets", budgetService.getAllBudgets());
@@ -90,7 +99,13 @@ public class ExpenseController {
     }
 
     @GetMapping("/edit/{id}")
-    public String showEditForm(@PathVariable("id") Integer id, Model model) {
+    public String showEditForm(@PathVariable("id") Integer id,
+                               Model model,
+                               Authentication authentication) {
+        int userId = authenticationUtils.getLoggedInUserId(authentication);
+        if(userId == -1) {
+            return "error/not-found";
+        }
         Expense expense = expenseService.getExpenseById(id);
         if (expense == null) {
             return "error/not-found";
@@ -98,30 +113,35 @@ public class ExpenseController {
 
         model.addAttribute("expense", expense);
         model.addAttribute("budgets", budgetService.getAllBudgets());
-        model.addAttribute("tickets", ticketService.getAllTickets());
-        model.addAttribute("leads", leadService.getAllLeads());
+        model.addAttribute("tickets", ticketService.findEmployeeTickets(userId));
+        model.addAttribute("leads", leadService.findAssignedLeads(userId));
         return "expenses/update-expense";
     }
 
     @PostMapping("/update")
     public String updateExpense(@Valid @ModelAttribute("expense") Expense expense,
                                     BindingResult bindingResult,
-                                    Model model) {
+                                    Model model,
+                                    Authentication authentication) {
+        int userId = authenticationUtils.getLoggedInUserId(authentication);
+        if(userId == -1) {
+            return "error/not-found";
+        }
         if (bindingResult.hasErrors()) {
             model.addAttribute("budgets", budgetService.getAllBudgets());
-            model.addAttribute("tickets", ticketService.getAllTickets());
-            model.addAttribute("leads", leadService.getAllLeads());
+            model.addAttribute("tickets", ticketService.findEmployeeTickets(userId));
+            model.addAttribute("leads", leadService.findAssignedLeads(userId));
             return "expenses/update-expense";
         }
 
         try {
             expenseService.updateExpense(expense);
-            return "redirect:/manager/expenses?budgetId=" + expense.getBudget().getId();
+            return "redirect:/employee/expenses?budgetId=" + expense.getBudget().getId();
         } catch (Exception e) {
             bindingResult.rejectValue("amount", "error.expense", "Budget limit exceeded");
             model.addAttribute("budgets", budgetService.getAllBudgets());
-            model.addAttribute("tickets", ticketService.getAllTickets());
-            model.addAttribute("leads", leadService.getAllLeads());
+            model.addAttribute("tickets", ticketService.findEmployeeTickets(userId));
+            model.addAttribute("leads", leadService.findAssignedLeads(userId));
             return "expenses/update-expense";
         }
     }
@@ -137,6 +157,6 @@ public class ExpenseController {
         }
 
         expenseService.deleteExpense(id);
-        return "redirect:/manager/expenses" + (redirectBudgetId != null ? "?budgetId=" + redirectBudgetId : "");
+        return "redirect:/employee/expenses" + (redirectBudgetId != null ? "?budgetId=" + redirectBudgetId : "");
     }
 }
