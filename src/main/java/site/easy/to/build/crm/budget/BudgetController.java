@@ -25,7 +25,7 @@ public class BudgetController {
 
     @GetMapping
     public String listBudgets(@RequestParam(value = "customerId", required = false) Integer customerId, Model model) {
-        List<Budget> budgets = new ArrayList<>();
+        List<BudgetCustomer> budgets = new ArrayList<>();
         if (customerId == null) {
             budgets = budgetService.getAllBudgets();
         } else {

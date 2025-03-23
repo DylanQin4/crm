@@ -9,20 +9,19 @@ import java.util.List;
 public class BudgetService {
 
     private final BudgetRepository budgetRepository;
+    private final BudgetCustomerRepository budgetCustomerRepository;
 
-    public BudgetService(BudgetRepository budgetRepository) {
+    public BudgetService(BudgetRepository budgetRepository, BudgetCustomerRepository budgetCustomerRepository) {
         this.budgetRepository = budgetRepository;
+        this.budgetCustomerRepository = budgetCustomerRepository;
     }
 
-    public List<Budget> getAllBudgets() {
-        return budgetRepository.findAll();
+    public List<BudgetCustomer> getAllBudgets() {
+        return budgetCustomerRepository.findAll();
     }
 
     @Transactional
     public void createBudget(Budget budget) {
-        if (budget.getRemainingBudget() == null) {
-            budget.setRemainingBudget(budget.getBudget());
-        }
         budgetRepository.save(budget);
     }
 
@@ -40,7 +39,7 @@ public class BudgetService {
         return budgetRepository.findById(id).orElse(null);
     }
 
-    public List<Budget> getBudgetsByCustomerId(Integer customerId) {
-        return budgetRepository.findByCustomerId(customerId);
+    public List<BudgetCustomer> getBudgetsByCustomerId(Integer customerId) {
+        return budgetCustomerRepository.findByCustomerId(customerId);
     }
 }
