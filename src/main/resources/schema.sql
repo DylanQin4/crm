@@ -526,7 +526,6 @@ CREATE TABLE expenses(
     date_expense DATE,
     ticket_id INT UNSIGNED,
     lead_id INT UNSIGNED,
-    customer_id INT UNSIGNED,
     budget_id INT UNSIGNED NOT NULL,
     PRIMARY KEY(id),
     FOREIGN KEY(ticket_id) REFERENCES trigger_ticket(ticket_id),

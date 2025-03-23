@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<div th:insert="~{/general/head.html}"></div>
+<meta name="_csrf" content="${_csrf.token}"/>
+<meta name="_csrf_header" content="${_csrf.headerName}"/>
+
+<!-- Editable CSS -->
+<link rel="stylesheet" type="text/css"
+      th:href="@{/css/dataTables.bootstrap4.css}">
+<link rel="stylesheet" type="text/css"
+      th:href="@{/css/responsive.dataTables.min.css}">
+
+<!-- Custom CSS -->
+<link th:href="@{/css/style.min.css}" rel="stylesheet">
+<!-- page css -->
+<link th:href="@{/css/pages/inbox.css}" rel="stylesheet">
+
+</head>
+
+<body class="skin-blue fixed-layout">
+<!-- Preloader -->
+<div class="preloader">
+    <div class="loader">
+        <div class="loader__figure"></div>
+        <p class="loader__label">CRM</p>
+    </div>
+</div>
+<!-- Main wrapper -->
+<div id="main-wrapper">
+    <!-- Topbar header -->
+    <div th:insert="~{/general/header.html}"></div>
+    <!-- Left Sidebar -->
+    <div th:insert="~{/general/left-sidebar.html}"></div>
+    <!-- Page wrapper -->
+    <div class="page-wrapper">
+        <!-- Container fluid -->
+        <div class="container-fluid">
+            <!-- Bread crumb -->
+            <div th:insert="~{/general/page-titles.html}"></div>
+
+            <!-- Start Page Content -->
+            <div class="row">
+                <div class="col-lg-12">
+                    <div class="card">
+                        <div class="card-body">
+                            <h4 class="card-title">Expenses</h4>
+                            <div class="m-t-40">
+                                <form th:action="@{/manager/expenses}" method="get" class="d-flex gap-2">
+                                    <div class="form-group mb-0 mr-2">
+                                        <label for="budgetId" class="form-label">Budgets</label>
+                                        <select id="budgetId" name="budgetId" class="form-select">
+                                            <option value="" selected>All Budgets</option>
+                                            <option th:each="budget : ${budgets}"
+                                                    th:value="${budget.budgetId}"
+                                                    th:text="${budget.designation}"
+                                                    th:selected="${budget.budgetId == budgetId}">
+                                            </option>
+                                        </select>
+                                    </div>
+                                    <button type="submit" class="btn btn-primary align-self-end">Filter</button>
+                                    <a th:href="@{/manager/expenses/new}" class="btn btn-success align-self-end ml-2">
+                                        Create New Expense
+                                    </a>
+                                </form>
+                            </div>
+                            <div class="table-responsive">
+                                <table id="config-table" class="table display table-bordered table-striped no-wrap">
+                                    <thead>
+                                    <tr>
+                                        <th>#</th>
+                                        <th>Amount</th>
+                                        <th>Label</th>
+                                        <th>Date</th>
+                                        <th>Budget</th>
+                                        <th>Edit</th>
+                                        <th>Delete</th>
+                                    </tr>
+                                    </thead>
+                                    <tbody>
+                                    <tr th:each="expense : ${expenses}">
+                                        <td th:text="${expense.id}"></td>
+                                        <td th:text="${#numbers.formatDecimal(expense.amount, 1, 'COMMA', 2, 'POINT')}"></td>
+                                        <td th:text="${expense.label}"></td>
+                                        <td th:text="${expense.dateExpense}"></td>
+                                        <td th:text="${expense.budget.designation}"></td>
+                                        <td>
+                                            <a th:href="@{|${home}manager/expenses/edit/${expense.id}|}">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                        </td>
+                                        <td>
+                                            <form th:action="@{|${home}manager/expenses/delete/${expense.id}|}" method="get">
+                                                <input type="hidden" name="budgetId" th:value="${budgetId}" />
+                                                <button type="submit" class="btn btn-primary">
+                                                    <i class="mdi mdi-delete"></i>
+                                                </button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- End Page Content -->
+
+            <!-- Right sidebar -->
+            <div th:insert="~{/general/right-sidebar.html}"></div>
+        </div>
+        <!-- End Container fluid -->
+    </div>
+    <!-- End Page wrapper -->
+
+    <!-- footer -->
+    <div th:insert="~{/general/footer.html}"></div>
+</div>
+<!-- End Wrapper -->
+
+<!-- All Jquery -->
+<script th:inline="javascript">
+    var home = /*[[${home}]]*/ null;
+</script>
+<script th:src="@{/js/library/jquery-3.2.1.min.js}" type="text/javascript">></script>
+<script th:src="@{/js/library/popper.min.js}" type="text/javascript">></script>
+<script th:src="@{/js/library/bootstrap.min.js}" type="text/javascript">></script>
+<script th:src="@{/js/library/perfect-scrollbar.jquery.min.js}" type="text/javascript">></script>
+<script th:src="@{/js/library/waves.js}" type="text/javascript">></script>
+<script th:src="@{/js/library/sidebarmenu.js}" type="text/javascript">></script>
+<script th:src="@{/js/library/sticky-kit.min.js}"></script>
+<script th:src="@{/js/library/jquery.sparkline.min.js}" type="text/javascript">></script>
+<script th:src="@{/js/library/custom.min.js}" type="text/javascript">></script>
+<script th:src="@{/js/library/jquery.dataTables.min.js}"></script>
+<script th:src="@{/js/library/dataTables.responsive.min.js}"></script>
+<script>
+    $('#config-table').DataTable({
+        responsive: true
+    });
+</script>
+</body>
+</html>
