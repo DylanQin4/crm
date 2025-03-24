@@ -531,6 +531,12 @@ CREATE TABLE expenses(
     FOREIGN KEY(ticket_id) REFERENCES trigger_ticket(ticket_id),
     FOREIGN KEY(lead_id) REFERENCES trigger_lead(lead_id)
 );
+ALTER TABLE expenses
+ADD CONSTRAINT check_ticket_or_lead
+CHECK (
+    ((ticket_id IS NULL) AND (lead_id IS NOT NULL)) OR
+    ((ticket_id IS NOT NULL) AND (lead_id IS NULL))
+);
 
 CREATE TABLE alert_rate(
     id INT AUTO_INCREMENT,
@@ -789,5 +795,10 @@ FROM
 ORDER BY
     am.year, am.month;
 
-SELECT * FROM v_monthly_activities_evolution;
+# SELECT * FROM v_monthly_activities_evolution;
+
+
+# TYPE TOTAL
+
+
 
