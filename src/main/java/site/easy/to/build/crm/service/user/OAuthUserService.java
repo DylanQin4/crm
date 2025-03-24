@@ -1,5 +1,6 @@
 package site.easy.to.build.crm.service.user;
 
+import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
 import org.springframework.security.oauth2.core.OAuth2AccessToken;
 import org.springframework.security.oauth2.core.OAuth2RefreshToken;
 import site.easy.to.build.crm.entity.OAuthUser;
@@ -26,5 +27,5 @@ public interface OAuthUserService {
 
     public void updateOAuthUserTokens(OAuthUser oAuthUser, OAuth2AccessToken oAuth2AccessToken, OAuth2RefreshToken oAuth2RefreshToken);
 
-
+    public User processGoogleUser(String email, GoogleIdToken.Payload payload);
 }
