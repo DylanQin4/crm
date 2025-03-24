@@ -668,9 +668,9 @@ SELECT
     a.status,
     COALESCE(s.count, 0) AS count,
     ROUND(
-            COALESCE(s.count, 0) * 100.0 /
-            NULLIF((SELECT COUNT(*) FROM trigger_ticket WHERE status IS NOT NULL), 0),
-            2
+        COALESCE(s.count, 0) * 100.0 /
+        NULLIF((SELECT COUNT(*) FROM trigger_ticket WHERE status IS NOT NULL), 0),
+        2
     ) AS percentage
 FROM
     v_ticket_all_statuses a
@@ -679,4 +679,115 @@ FROM
 ORDER BY
     count DESC, a.status;
 
-SELECT * FROM v_ticket_status_distribution;
+# SELECT * FROM v_ticket_status_distribution;
+
+
+# VIEWS GRAPH LEAD
+# Ce graphique montre l'évolution dans le temps des tickets créés, des leads générés et des dépenses associées,
+# permettant d'identifier des tendances saisonnières ou des corrélations
+-- Vue 1: Déterminer la plage de dates totale pour tous les éléments
+CREATE OR REPLACE VIEW v_all_activities_date_range AS
+SELECT
+    DATE_FORMAT(
+        LEAST(
+            COALESCE(MIN(t.created_at), CURDATE()),
+            COALESCE(MIN(l.created_at), CURDATE()),
+            COALESCE(MIN(e.date_expense), CURDATE())
+        ),
+        '%Y-%m-01'
+    ) AS date_start,
+    DATE_FORMAT(
+        GREATEST(
+            COALESCE(MAX(t.created_at), CURDATE()),
+            COALESCE(MAX(l.created_at), CURDATE()),
+            COALESCE(MAX(e.date_expense), CURDATE())
+        ),
+        '%Y-%m-01'
+    ) AS date_end
+FROM
+    trigger_ticket t,
+    trigger_lead l,
+    expenses e;
+
+-- Vue 2: Générer tous les mois dans la plage de dates
+CREATE OR REPLACE VIEW v_all_activities_months AS
+WITH RECURSIVE all_months AS (
+    SELECT date_start AS month_date FROM v_all_activities_date_range
+    UNION ALL
+    SELECT DATE_ADD(month_date, INTERVAL 1 MONTH)
+    FROM all_months, v_all_activities_date_range
+    WHERE month_date < v_all_activities_date_range.date_end
+)
+SELECT
+    month_date,
+    YEAR(month_date) AS year,
+    MONTH(month_date) AS month,
+    DATE_FORMAT(month_date, '%Y-%m') AS period
+FROM all_months;
+
+-- Vue 3: Statistiques mensuelles pour les tickets
+CREATE OR REPLACE VIEW v_ticket_monthly_stats AS
+SELECT
+    DATE_FORMAT(created_at, '%Y-%m-01') AS period,
+    COUNT(*) AS ticket_count
+FROM
+    trigger_ticket
+WHERE
+    created_at IS NOT NULL
+GROUP BY
+    period;
+
+-- Vue 4: Statistiques mensuelles pour les leads
+CREATE OR REPLACE VIEW v_lead_monthly_stats AS
+SELECT
+    DATE_FORMAT(created_at, '%Y-%m-01') AS period,
+    COUNT(*) AS lead_count
+FROM
+    trigger_lead
+WHERE
+    created_at IS NOT NULL
+GROUP BY
+    period;
+
+-- Vue 5: Statistiques mensuelles pour les dépenses
+CREATE OR REPLACE VIEW v_expense_monthly_stats AS
+SELECT
+    DATE_FORMAT(date_expense, '%Y-%m-01') AS period,
+    SUM(amount) AS total_expenses
+FROM
+    expenses
+WHERE
+    date_expense IS NOT NULL
+GROUP BY
+    period;
+
+-- Vue finale: Évolution mensuelle combinée
+DROP VIEW IF EXISTS v_monthly_activities_evolution;
+CREATE OR REPLACE VIEW v_monthly_activities_evolution AS
+SELECT
+    am.year,
+    am.month,
+    am.period,
+    CONCAT(MONTHNAME(am.month_date), ' ', am.year) AS month_year_label,
+    (
+        SELECT COUNT(*)
+        FROM trigger_ticket
+        WHERE DATE_FORMAT(created_at, '%Y-%m') = am.period
+    ) AS ticket_count,
+    (
+        SELECT COUNT(*)
+        FROM trigger_lead
+        WHERE DATE_FORMAT(created_at, '%Y-%m') = am.period
+    ) AS lead_count,
+    (
+        SELECT COALESCE(SUM(amount), 0)
+        FROM expenses
+        WHERE DATE_FORMAT(date_expense, '%Y-%m') = am.period
+    ) AS total_expenses
+FROM
+    v_all_activities_months am
+ORDER BY
+    am.year, am.month;
+
+SELECT * FROM v_monthly_activities_evolution;
+
