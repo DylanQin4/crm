@@ -537,6 +537,10 @@ CHECK (
     ((ticket_id IS NULL) AND (lead_id IS NOT NULL)) OR
     ((ticket_id IS NOT NULL) AND (lead_id IS NULL))
 );
+-- Add unique constraints to ensure one-to-one relations
+ALTER TABLE expenses
+ADD CONSTRAINT unique_ticket_expense UNIQUE (ticket_id),
+ADD CONSTRAINT unique_lead_expense UNIQUE (lead_id);
 
 CREATE TABLE alert_rate(
     id INT AUTO_INCREMENT,
@@ -580,8 +584,8 @@ SELECT
     COALESCE(SUM(b.budget), 0) AS total_budget,
     COALESCE(SUM(b.budget) - COALESCE(SUM(exp.amount), 0), 0) AS total_remaining_budget
 FROM customer
-         LEFT JOIN budgets b ON b.customer_id = customer.customer_id
-         LEFT JOIN expenses exp ON exp.budget_id = b.id
+     LEFT JOIN budgets b ON b.customer_id = customer.customer_id
+     LEFT JOIN expenses exp ON exp.budget_id = b.id
 GROUP BY customer.customer_id, customer.name;
 
 
@@ -799,6 +803,7 @@ ORDER BY
 
 
 # TYPE TOTAL
+
 
 
 
