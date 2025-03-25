@@ -19,8 +19,17 @@ public class APIExpenseController {
     }
 
     @PutMapping("/{id_expense}")
-    public ResponseEntity<Void> updateExpenseAmount(@PathVariable("id_expense") Integer idExpense, @RequestBody BigDecimal amount) {
-        expenseService.updateExpenseAmount(idExpense, amount);
+    public ResponseEntity<Void> updateExpenseAmount(@PathVariable("id_expense") Integer idExpense, @RequestBody String amount) {
+        BigDecimal amountNumeric = BigDecimal.ZERO;
+        System.out.println("amount: " + amount);
+        try {
+            amount = amount.replace("\"", "");
+            amountNumeric = new BigDecimal(amount);
+        } catch (NumberFormatException e) {
+            e.printStackTrace();
+            return ResponseEntity.badRequest().build();
+        }
+        expenseService.updateExpenseAmount(idExpense, amountNumeric);
         return ResponseEntity.ok().build();
     }
 }

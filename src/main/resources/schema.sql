@@ -633,7 +633,7 @@ FROM all_months;
 DROP VIEW IF EXISTS customer_monthly_stats;
 CREATE OR REPLACE VIEW customer_monthly_stats AS
 SELECT
-    DATE_FORMAT(created_at, '%Y-%m-01') AS period,
+    DATE_FORMAT(created_at, '%Y-%m') AS period,
     YEAR(created_at) AS year,
     MONTH(created_at) AS month,
     COUNT(*) AS new_customers
@@ -659,7 +659,7 @@ FROM
 ORDER BY
     am.year, am.month;
 
-# SELECT * FROM v_customer_evolution_stats;
+SELECT * FROM v_customer_evolution_stats;
 
 
 # VIEWS GRAPH TICKET
@@ -815,7 +815,7 @@ FROM
 ORDER BY
     am.year, am.month;
 
-# SELECT * FROM v_monthly_activities_evolution;
+SELECT * FROM v_monthly_activities_evolution;
 
 
 # TYPE TOTAL
