@@ -7,6 +7,7 @@ import site.easy.to.build.crm.budget.BudgetService;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @Transactional
@@ -26,6 +27,17 @@ public class ExpenseService {
 
     public List<Expense> getExpensesByBudgetId(Integer budgetId) {
         return expenseRepository.findByBudgetId(budgetId);
+    }
+
+    public void updateExpenseAmount(Integer id, BigDecimal amount) {
+        Optional<Expense> optionalExpense = expenseRepository.findById(id);
+        if (optionalExpense.isPresent()) {
+            Expense expense = optionalExpense.get();
+            expense.setAmount(amount);
+            expenseRepository.save(expense);
+        } else {
+            throw new RuntimeException("Expense not found");
+        }
     }
 
     public void createExpense(Expense expense) {
