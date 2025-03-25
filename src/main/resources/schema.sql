@@ -843,7 +843,24 @@ ORDER BY
 SELECT  * FROM v_ticket_expenses_detail;
 
 # Lead
-
+CREATE OR REPLACE VIEW v_lead_expenses_detail AS
+SELECT
+    l.lead_id,
+    l.name AS lead_name,
+    l.status,
+    c.name AS customer_name,
+    e.id AS expense_id,
+    COUNT(e.id) AS expense_count,
+    COALESCE(SUM(e.amount), 0) AS total_expense_amount
+FROM trigger_lead l
+         INNER JOIN
+     expenses e ON l.lead_id = e.lead_id
+         INNER JOIN
+     customer c on l.customer_id = c.customer_id
+GROUP BY
+    l.lead_id, l.name, l.status, c.name, e.id
+ORDER BY
+    total_expense_amount DESC;
 
 
 
