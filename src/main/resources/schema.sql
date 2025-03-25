@@ -542,6 +542,21 @@ ALTER TABLE expenses
 ADD CONSTRAINT unique_ticket_expense UNIQUE (ticket_id),
 ADD CONSTRAINT unique_lead_expense UNIQUE (lead_id);
 
+ALTER TABLE expenses
+    DROP FOREIGN KEY expenses_ibfk_1;
+ALTER TABLE expenses
+ADD CONSTRAINT expenses_ibfk_1
+FOREIGN KEY(ticket_id) REFERENCES trigger_ticket(ticket_id)
+ON DELETE CASCADE;
+
+ALTER TABLE expenses
+    DROP FOREIGN KEY expenses_ibfk_2;
+ALTER TABLE expenses
+ADD CONSTRAINT expenses_ibfk_2
+FOREIGN KEY(lead_id) REFERENCES trigger_lead(lead_id)
+ON DELETE CASCADE;
+
+
 CREATE TABLE alert_rate(
     id INT AUTO_INCREMENT,
     rate DECIMAL(5,2) NOT NULL,
@@ -550,6 +565,7 @@ CREATE TABLE alert_rate(
     PRIMARY KEY(id)
 );
 INSERT INTO alert_rate (rate) VALUES (0.8); -- 80%
+
 
 
 CREATE VIEW budget_customer AS
@@ -803,6 +819,31 @@ ORDER BY
 
 
 # TYPE TOTAL
+# Ticket
+CREATE OR REPLACE VIEW v_ticket_expenses_detail AS
+SELECT
+    t.ticket_id,
+    t.subject,
+    t.status,
+    t.priority,
+    c.name AS customer_name,
+    e.id AS expense_id,
+    COUNT(e.id) AS expense_count,
+    COALESCE(SUM(e.amount), 0) AS total_expense_amount
+FROM trigger_ticket t
+    INNER JOIN
+    expenses e ON t.ticket_id = e.ticket_id
+    INNER JOIN
+    customer c on t.customer_id = c.customer_id
+GROUP BY
+    t.ticket_id, t.subject, t.status
+ORDER BY
+    total_expense_amount DESC;
+
+SELECT  * FROM v_ticket_expenses_detail;
+
+# Lead
+
 
 
 

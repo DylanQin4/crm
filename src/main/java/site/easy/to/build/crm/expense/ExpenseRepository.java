@@ -16,5 +16,9 @@ public interface ExpenseRepository extends JpaRepository<Expense, Integer> {
 
     @Query("SELECT COALESCE(SUM(e.amount), 0) FROM Expense e WHERE e.budget.id = :budgetId")
     BigDecimal getTotalExpensesByBudget(@Param("budgetId") Integer budgetId);
+
+    boolean existsByTicketId(Integer ticketId);
+    boolean existsByLeadId(Integer leadId);
+    Expense findByTicketId(Integer ticketId);
 }
 
