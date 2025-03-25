@@ -531,6 +531,31 @@ CREATE TABLE expenses(
     FOREIGN KEY(ticket_id) REFERENCES trigger_ticket(ticket_id),
     FOREIGN KEY(lead_id) REFERENCES trigger_lead(lead_id)
 );
+ALTER TABLE expenses
+ADD CONSTRAINT check_ticket_or_lead
+CHECK (
+    ((ticket_id IS NULL) AND (lead_id IS NOT NULL)) OR
+    ((ticket_id IS NOT NULL) AND (lead_id IS NULL))
+);
+-- Add unique constraints to ensure one-to-one relations
+ALTER TABLE expenses
+ADD CONSTRAINT unique_ticket_expense UNIQUE (ticket_id),
+ADD CONSTRAINT unique_lead_expense UNIQUE (lead_id);
+
+ALTER TABLE expenses
+    DROP FOREIGN KEY expenses_ibfk_1;
+ALTER TABLE expenses
+ADD CONSTRAINT expenses_ibfk_1
+FOREIGN KEY(ticket_id) REFERENCES trigger_ticket(ticket_id)
+ON DELETE CASCADE;
+
+ALTER TABLE expenses
+    DROP FOREIGN KEY expenses_ibfk_2;
+ALTER TABLE expenses
+ADD CONSTRAINT expenses_ibfk_2
+FOREIGN KEY(lead_id) REFERENCES trigger_lead(lead_id)
+ON DELETE CASCADE;
+
 
 CREATE TABLE alert_rate(
     id INT AUTO_INCREMENT,
@@ -540,6 +565,7 @@ CREATE TABLE alert_rate(
     PRIMARY KEY(id)
 );
 INSERT INTO alert_rate (rate) VALUES (0.8); -- 80%
+
 
 
 CREATE VIEW budget_customer AS
@@ -574,8 +600,8 @@ SELECT
     COALESCE(SUM(b.budget), 0) AS total_budget,
     COALESCE(SUM(b.budget) - COALESCE(SUM(exp.amount), 0), 0) AS total_remaining_budget
 FROM customer
-         LEFT JOIN budgets b ON b.customer_id = customer.customer_id
-         LEFT JOIN expenses exp ON exp.budget_id = b.id
+     LEFT JOIN budgets b ON b.customer_id = customer.customer_id
+     LEFT JOIN expenses exp ON exp.budget_id = b.id
 GROUP BY customer.customer_id, customer.name;
 
 
@@ -789,5 +815,36 @@ FROM
 ORDER BY
     am.year, am.month;
 
-SELECT * FROM v_monthly_activities_evolution;
+# SELECT * FROM v_monthly_activities_evolution;
+
+
+# TYPE TOTAL
+# Ticket
+CREATE OR REPLACE VIEW v_ticket_expenses_detail AS
+SELECT
+    t.ticket_id,
+    t.subject,
+    t.status,
+    t.priority,
+    c.name AS customer_name,
+    e.id AS expense_id,
+    COUNT(e.id) AS expense_count,
+    COALESCE(SUM(e.amount), 0) AS total_expense_amount
+FROM trigger_ticket t
+    INNER JOIN
+    expenses e ON t.ticket_id = e.ticket_id
+    INNER JOIN
+    customer c on t.customer_id = c.customer_id
+GROUP BY
+    t.ticket_id, t.subject, t.status
+ORDER BY
+    total_expense_amount DESC;
+
+SELECT  * FROM v_ticket_expenses_detail;
+
+# Lead
+
+
+
+
 

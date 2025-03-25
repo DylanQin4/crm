@@ -1,6 +1,7 @@
 package site.easy.to.build.crm.expense;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.Getter;
@@ -44,4 +45,9 @@ public class Expense {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "budget_id", nullable = false)
     private Budget budget;
+
+    @AssertTrue(message = "Either ticket_id or lead_id must be set, but not both")
+    private boolean isTicketOrLeadValid() {
+        return (ticketId == null) != (leadId == null);
+    }
 }

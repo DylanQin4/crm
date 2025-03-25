@@ -112,7 +112,7 @@
                                                 <option value="">Select Lead</option>
                                                 <option th:each="lead : ${leads}"
                                                         th:value="${lead.leadId}"
-                                                        th:text="${lead.subject}">
+                                                        th:text="${lead.name}">
                                                 </option>
                                             </select>
                                         </div>

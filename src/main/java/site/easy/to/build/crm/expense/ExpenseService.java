@@ -9,6 +9,7 @@ import java.math.BigDecimal;
 import java.util.List;
 
 @Service
+@Transactional
 public class ExpenseService {
 
     private final ExpenseRepository expenseRepository;
@@ -27,8 +28,50 @@ public class ExpenseService {
         return expenseRepository.findByBudgetId(budgetId);
     }
 
-    @Transactional
     public void createExpense(Expense expense) {
+        // Check if this is an existing expense being updated
+        boolean isUpdate = expense.getId() != null;
+
+        // Validate unique ticket constraint
+        if (expense.getTicketId() != null) {
+            List<Expense> existingExpenses = expenseRepository.findByTicket(expense.getTicketId());
+
+            if (!existingExpenses.isEmpty() &&
+                    (!isUpdate || !existingExpenses.get(0).getId().equals(expense.getId()))) {
+                throw new DuplicateExpenseException("An expense record already exists for this ticket");
+            }
+        }
+
+        // Validate unique lead constraint
+        if (expense.getLeadId() != null) {
+            List<Expense> existingExpenses = expenseRepository.findByLeadId(expense.getLeadId());
+
+            if (!existingExpenses.isEmpty() &&
+                    (!isUpdate || !existingExpenses.get(0).getId().equals(expense.getId()))) {
+                throw new DuplicateExpenseException("An expense record already exists for this lead");
+            }
+        }
+
+        // Check if budget limit would be exceeded
+        Budget budget = expense.getBudget();
+        if (budget != null) {
+            BigDecimal currentExpenses = expenseRepository.getTotalExpensesByBudget(budget.getId());
+            BigDecimal newExpenseAmount = expense.getAmount();
+
+            // For updates, only count the difference
+            if (isUpdate) {
+                Expense oldExpense = expenseRepository.findById(expense.getId()).orElse(null);
+                if (oldExpense != null) {
+                    newExpenseAmount = newExpenseAmount.subtract(oldExpense.getAmount());
+                }
+            }
+
+            BigDecimal totalAfterNewExpense = currentExpenses.add(newExpenseAmount);
+            if (totalAfterNewExpense.compareTo(budget.getBudget()) > 0) {
+                throw new RuntimeException("Budget limit exceeded");
+            }
+        }
+
         expenseRepository.save(expense);
     }
 

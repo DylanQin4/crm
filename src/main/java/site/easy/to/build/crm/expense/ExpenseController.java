@@ -91,21 +91,49 @@ public class ExpenseController {
 
     @PostMapping("/save")
     public String saveExpense(@Valid @ModelAttribute("expense") Expense expense,
-                                  BindingResult bindingResult,
-                                  Model model) {
+                              BindingResult bindingResult,
+                              Model model,
+                              Authentication authentication) {
+
+        int userId = authenticationUtils.getLoggedInUserId(authentication);
+        boolean isManager = authentication.getAuthorities().stream()
+                .anyMatch(auth -> auth.getAuthority().equals("ROLE_MANAGER"));
+        List<Ticket> tickets = isManager ? ticketService.getAllTickets() : ticketService.findEmployeeTickets(userId);
+        List<Lead> leads = isManager ? leadService.getAllLeads() : leadService.findAssignedLeads(userId);
+
         if (bindingResult.hasErrors()) {
             model.addAttribute("budgets", budgetService.getAllBudgets());
             model.addAttribute("customers", customerRepository.findAll());
+            model.addAttribute("tickets", tickets);
+            model.addAttribute("leads", leads);
             return "expenses/create-expense";
         }
 
         try {
             expenseService.createExpense(expense);
             return "redirect:/employee/expenses?budgetId=" + expense.getBudget().getId();
-        } catch (Exception e) {
-            bindingResult.rejectValue("amount", "error.expense", "Budget limit exceeded");
+        } catch (DuplicateExpenseException e) {
+            // Add specific error message for duplicate expense
+            if (expense.getTicketId() != null) {
+                bindingResult.rejectValue("ticketId", "error.expense.duplicate",
+                    "An expense already exists for this ticket");
+            } else if (expense.getLeadId() != null) {
+                bindingResult.rejectValue("leadId", "error.expense.duplicate",
+                    "An expense already exists for this lead");
+            }
+            model.addAttribute("errorMessage", e.getMessage());
             model.addAttribute("budgets", budgetService.getAllBudgets());
             model.addAttribute("customers", customerRepository.findAll());
+            model.addAttribute("tickets", tickets);
+            model.addAttribute("leads", leads);
+            return "expenses/create-expense";
+        } catch (Exception e) {
+            // For other exceptions like budget limit
+            bindingResult.rejectValue("amount", "error.expense", e.getMessage());
+            model.addAttribute("budgets", budgetService.getAllBudgets());
+            model.addAttribute("customers", customerRepository.findAll());
+            model.addAttribute("tickets", tickets);
+            model.addAttribute("leads", leads);
             return "expenses/create-expense";
         }
     }
