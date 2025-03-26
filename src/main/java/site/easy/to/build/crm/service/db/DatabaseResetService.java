@@ -29,6 +29,8 @@ public class DatabaseResetService {
             TRUNCATE TABLE trigger_contract;
             TRUNCATE TABLE contract_settings;
             TRUNCATE TABLE employee;
+            TRUNCATE TABLE budgets;
+            TRUNCATE TABLE expenses;
             SET FOREIGN_KEY_CHECKS = 1;
         """;
 

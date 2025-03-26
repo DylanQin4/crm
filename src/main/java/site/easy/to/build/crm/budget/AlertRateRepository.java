@@ -8,7 +8,7 @@ import java.math.BigDecimal;
 
 @Repository
 public interface AlertRateRepository extends JpaRepository<AlertRate, Long> {
-    @Query("SELECT a.rate FROM AlertRate a ORDER BY a.id DESC LIMIT 1")
+    @Query("SELECT a.rate FROM AlertRate a ORDER BY a.createdAt DESC LIMIT 1")
     BigDecimal findLatestRate();
 }
 

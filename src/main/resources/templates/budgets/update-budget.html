@@ -71,9 +71,6 @@
                     <div class="card">
                         <div class="card-body">
                             <h4 class="card-title">Update Budget</h4>
-                            <div th:if="${alertReached}" class="alert alert-warning">
-                                ⚠ Warning: You've reached your budget alert threshold!
-                            </div>
                             <form th:object="${budgetx}" th:action="@{/manager/budgets/update}" method="post">
                                 <input type="hidden" name="id" id="id" th:field="*{id}">
 

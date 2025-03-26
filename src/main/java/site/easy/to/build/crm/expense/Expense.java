@@ -41,11 +41,6 @@ public class Expense {
     @Column(name = "lead_id")
     private Integer leadId;
 
-    @NotNull
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "budget_id", nullable = false)
-    private Budget budget;
-
     @AssertTrue(message = "Either ticket_id or lead_id must be set, but not both")
     private boolean isTicketOrLeadValid() {
         return (ticketId == null) != (leadId == null);

@@ -556,6 +556,9 @@ ADD CONSTRAINT expenses_ibfk_2
 FOREIGN KEY(lead_id) REFERENCES trigger_lead(lead_id)
 ON DELETE CASCADE;
 
+ALTER TABLE  expenses
+DROP COLUMN budget_id;
+
 
 CREATE TABLE alert_rate(
     id INT AUTO_INCREMENT,
@@ -568,7 +571,7 @@ INSERT INTO alert_rate (rate) VALUES (0.8); -- 80%
 
 
 
-CREATE VIEW budget_customer AS
+CREATE OR REPLACE VIEW budget_customer AS
 SELECT
     b.id AS budget_id,
     b.designation,
@@ -580,8 +583,9 @@ SELECT
     b.budget,
     b.budget - COALESCE(SUM(e.amount), 0) AS remaining_budget
 FROM budgets b
-         JOIN crm.customer c ON b.customer_id = c.customer_id
-         LEFT JOIN expenses e ON e.budget_id = b.id
+    JOIN crm.customer c ON b.customer_id = c.customer_id
+    LEFT JOIN expenses e ON e.ticket_id IN (SELECT t.ticket_id FROM trigger_ticket t WHERE t.customer_id = c.customer_id)
+    OR e.lead_id IN (SELECT l.lead_id FROM trigger_lead l WHERE l.customer_id = c.customer_id)
 GROUP BY
     b.id,
     b.designation,
@@ -592,6 +596,7 @@ GROUP BY
     c.name,
     b.budget;
 
+SELECT * FROM budget_customer;
 
 CREATE VIEW total_budget_customer AS
 SELECT
@@ -600,9 +605,12 @@ SELECT
     COALESCE(SUM(b.budget), 0) AS total_budget,
     COALESCE(SUM(b.budget) - COALESCE(SUM(exp.amount), 0), 0) AS total_remaining_budget
 FROM customer
-     LEFT JOIN budgets b ON b.customer_id = customer.customer_id
-     LEFT JOIN expenses exp ON exp.budget_id = b.id
+    LEFT JOIN budgets b ON b.customer_id = customer.customer_id
+    LEFT JOIN expenses exp ON exp.ticket_id IN (SELECT t.ticket_id FROM trigger_ticket t WHERE t.customer_id = customer.customer_id)
+    OR exp.lead_id IN (SELECT l.lead_id FROM trigger_lead l WHERE l.customer_id = customer.customer_id)
 GROUP BY customer.customer_id, customer.name;
+
+SELECT * FROM total_budget_customer;
 
 
 # VIEWS GRAPH customer

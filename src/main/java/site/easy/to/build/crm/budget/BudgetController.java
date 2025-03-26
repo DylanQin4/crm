@@ -34,9 +34,11 @@ public class BudgetController {
                 budgets = budgetService.getBudgetsByCustomerId(customerId);
             }
         }
+        List<String> alertMessages = budgetService.getAlertMessages();
         model.addAttribute("budgets", budgets);
         model.addAttribute("customers", customerRepository.findAll());
         model.addAttribute("customerId", customerId);
+        model.addAttribute("alertMessages", alertMessages);
         return "budgets/all-budgets";
     }
 
@@ -65,12 +67,6 @@ public class BudgetController {
         }
         model.addAttribute("customers", customerRepository.findAll());
         model.addAttribute("budgetx", budget);
-
-        boolean alertReached = budgetService.isAlertReached(id);
-        boolean budgetExceeded = budgetService.isBudgetExceeded(id);
-
-        model.addAttribute("alertReached", alertReached);
-        model.addAttribute("budgetExceeded", budgetExceeded);
         return "budgets/update-budget";
     }
 

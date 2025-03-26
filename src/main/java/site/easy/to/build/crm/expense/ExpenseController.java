@@ -44,37 +44,20 @@ public class ExpenseController {
     }
 
     @GetMapping
-    public String listExpenses(@RequestParam(value = "budgetId", required = false) Integer budgetId,
-                                   Model model) {
-        List<Expense> expenses;
-
-        if (budgetId != null) {
-            expenses = expenseService.getExpensesByBudgetId(budgetId);
-            model.addAttribute("budget", budgetService.getBudgetById(budgetId));
-            model.addAttribute("budgetId", budgetId);
-        } else {
-            expenses = expenseService.getAllExpenses();
-        }
+    public String listExpenses(Model model) {
+        List<Expense> expenses = expenseService.getAllExpenses();
 
         model.addAttribute("expenses", expenses);
-        model.addAttribute("budgets", budgetService.getAllBudgets());
         return "expenses/all-expenses";
     }
 
     @GetMapping("/new")
-    public String showCreateForm(@RequestParam(value = "budgetId", required = false) Integer budgetId,
-                                 Model model,
-                                 Authentication authentication) {
+    public String showCreateForm(Model model, Authentication authentication) {
         int userId = authenticationUtils.getLoggedInUserId(authentication);
         if(userId == -1) {
             return "error/not-found";
         }
         Expense expense = new Expense();
-
-
-        if (budgetId != null) {
-            expense.setBudget(budgetService.getBudgetById(budgetId));
-        }
 
         boolean isManager = authentication.getAuthorities().stream()
                 .anyMatch(auth -> auth.getAuthority().equals("ROLE_MANAGER"));
@@ -83,7 +66,6 @@ public class ExpenseController {
         List<Lead> leads = isManager ? leadService.getAllLeads() : leadService.findAssignedLeads(userId);
 
         model.addAttribute("expense", expense);
-        model.addAttribute("budgets", budgetService.getAllBudgets());
         model.addAttribute("tickets", tickets);
         model.addAttribute("leads", leads);
         return "expenses/create-expense";
@@ -93,6 +75,7 @@ public class ExpenseController {
     public String saveExpense(@Valid @ModelAttribute("expense") Expense expense,
                               BindingResult bindingResult,
                               Model model,
+                              @RequestParam(value = "confirm", required = false) Boolean confirm,
                               Authentication authentication) {
 
         int userId = authenticationUtils.getLoggedInUserId(authentication);
@@ -102,7 +85,6 @@ public class ExpenseController {
         List<Lead> leads = isManager ? leadService.getAllLeads() : leadService.findAssignedLeads(userId);
 
         if (bindingResult.hasErrors()) {
-            model.addAttribute("budgets", budgetService.getAllBudgets());
             model.addAttribute("customers", customerRepository.findAll());
             model.addAttribute("tickets", tickets);
             model.addAttribute("leads", leads);
@@ -110,25 +92,28 @@ public class ExpenseController {
         }
 
         try {
-            expenseService.createExpense(expense);
-            return "redirect:/employee/expenses?budgetId=" + expense.getBudget().getId();
+            expenseService.createExpense(expense, Boolean.TRUE.equals(confirm));
+            return "redirect:/employee/expenses";
         } catch (DuplicateExpenseException e) {
-            // Add specific error message for duplicate expense
             if (expense.getTicketId() != null) {
                 bindingResult.rejectValue("ticketId", "error.expense.duplicate",
-                    "An expense already exists for this ticket");
+                        "An expense already exists for this ticket");
             } else if (expense.getLeadId() != null) {
                 bindingResult.rejectValue("leadId", "error.expense.duplicate",
-                    "An expense already exists for this lead");
+                        "An expense already exists for this lead");
             }
             model.addAttribute("errorMessage", e.getMessage());
-            model.addAttribute("budgets", budgetService.getAllBudgets());
+            model.addAttribute("customers", customerRepository.findAll());
+            model.addAttribute("tickets", tickets);
+            model.addAttribute("leads", leads);
+            return "expenses/create-expense";
+        } catch (BudgetAlertException e) {
+            model.addAttribute("confirmMessage", e.getMessage());
             model.addAttribute("customers", customerRepository.findAll());
             model.addAttribute("tickets", tickets);
             model.addAttribute("leads", leads);
             return "expenses/create-expense";
         } catch (Exception e) {
-            // For other exceptions like budget limit
             bindingResult.rejectValue("amount", "error.expense", e.getMessage());
             model.addAttribute("budgets", budgetService.getAllBudgets());
             model.addAttribute("customers", customerRepository.findAll());
@@ -158,7 +143,6 @@ public class ExpenseController {
         List<Lead> leads = isManager ? leadService.getAllLeads() : leadService.findAssignedLeads(userId);
 
         model.addAttribute("expense", expense);
-        model.addAttribute("budgets", budgetService.getAllBudgets());
         model.addAttribute("tickets", tickets);
         model.addAttribute("leads", leads);
         return "expenses/update-expense";
@@ -181,7 +165,6 @@ public class ExpenseController {
         List<Lead> leads = isManager ? leadService.getAllLeads() : leadService.findAssignedLeads(userId);
 
         if (bindingResult.hasErrors()) {
-            model.addAttribute("budgets", budgetService.getAllBudgets());
             model.addAttribute("tickets", tickets);
             model.addAttribute("leads", leads);
             return "expenses/update-expense";
@@ -189,7 +172,7 @@ public class ExpenseController {
 
         try {
             expenseService.updateExpense(expense);
-            return "redirect:/employee/expenses?budgetId=" + expense.getBudget().getId();
+            return "redirect:/employee/expenses";
         } catch (Exception e) {
             bindingResult.rejectValue("amount", "error.expense", "Budget limit exceeded");
             model.addAttribute("budgets", budgetService.getAllBudgets());
@@ -200,16 +183,10 @@ public class ExpenseController {
     }
 
     @GetMapping("/delete/{id}")
-    public String deleteExpense(@PathVariable("id") Integer id,
-                                    @RequestParam(required = false) Integer budgetId) {
+    public String deleteExpense(@PathVariable("id") Integer id) {
         Expense expense = expenseService.getExpenseById(id);
-        Integer redirectBudgetId = budgetId;
-
-        if (expense != null && redirectBudgetId == null) {
-            redirectBudgetId = expense.getBudget().getId();
-        }
 
         expenseService.deleteExpense(id);
-        return "redirect:/employee/expenses" + (redirectBudgetId != null ? "?budgetId=" + redirectBudgetId : "");
+        return "redirect:/employee/expenses";
     }
 }

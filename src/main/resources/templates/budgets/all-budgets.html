@@ -99,7 +99,7 @@
                                         <th>#</th>
                                         <th>Designation</th>
                                         <th>Total Budget</th>
-                                        <th>Budget Remaining</th>
+<!--                                        <th>Budget Remaining</th>-->
                                         <th>Start Date</th>
                                         <th>Date End</th>
                                         <th>Customer</th>
@@ -112,7 +112,7 @@
                                         <td th:text="${budget.budgetId}"></td>
                                         <td th:text="${budget.designation}"></td>
                                         <td th:text="${#numbers.formatDecimal(budget.budget, 1, 'COMMA', 2, 'POINT')}"></td>
-                                        <td th:text="${#numbers.formatDecimal(budget.remainingBudget, 1, 'COMMA', 2, 'POINT')}"></td>
+<!--                                        <td th:text="${#numbers.formatDecimal(budget.remainingBudget, 1, 'COMMA', 2, 'POINT')}"></td>-->
                                         <td th:text="${budget.dateMin}"></td>
                                         <td th:text="${budget.dateMax}"></td>
                                         <td th:text="${budget.customerName}"></td>
@@ -131,6 +131,11 @@
                                     </tr>
                                     </tbody>
                                 </table>
+                            </div>
+                            <div th:if="${alertMessages != null}">
+                                <ul>
+                                    <li th:each="message : ${alertMessages}" th:text="${message}"></li>
+                                </ul>
                             </div>
                         </div>
                     </div>

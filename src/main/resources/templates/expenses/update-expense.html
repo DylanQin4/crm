@@ -101,20 +101,6 @@
                                     </div>
                                 </div>
 
-                                <label class="m-t-20" for="budget">Budget:</label>
-                                <div class="input-group">
-                                    <select id="budget" th:field="*{budget}" class="form-control">
-                                        <option value="">Select Budget</option>
-                                        <option th:each="budgetOption : ${budgets}"
-                                                th:value="${budgetOption.budgetId}"
-                                                th:text="${budgetOption.designation + ' - ' + budgetOption.customerName + ' (' + budgetOption.remainingBudget + ')'}">
-                                        </option>
-                                    </select>
-                                </div>
-                                <div class="input-group">
-                                    <span class="text-danger font-weight-bold" th:if="${#fields.hasErrors('budget')}" th:errors="*{budget}"></span>
-                                </div>
-
                                 <button type="submit" class="btn btn-primary m-t-20">Update Expense</button>
                             </form>
                         </div>

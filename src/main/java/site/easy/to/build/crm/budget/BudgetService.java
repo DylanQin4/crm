@@ -2,9 +2,14 @@ package site.easy.to.build.crm.budget;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import site.easy.to.build.crm.entity.Customer;
+import site.easy.to.build.crm.expense.Expense;
 import site.easy.to.build.crm.expense.ExpenseRepository;
+import site.easy.to.build.crm.expense.ExpenseService;
+import site.easy.to.build.crm.repository.CustomerRepository;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -12,36 +17,16 @@ public class BudgetService {
 
     private final BudgetRepository budgetRepository;
     private final BudgetCustomerRepository budgetCustomerRepository;
-    private final ExpenseRepository expenseRepository;
     private final AlertRateRepository alertRateRepository;
+    private final CustomerRepository customerRepository;
+    private final ExpenseRepository expenseRepository;
 
-    public BudgetService(BudgetRepository budgetRepository, BudgetCustomerRepository budgetCustomerRepository, ExpenseRepository expenseRepository, AlertRateRepository alertRateRepository) {
+    public BudgetService(BudgetRepository budgetRepository, BudgetCustomerRepository budgetCustomerRepository, AlertRateRepository alertRateRepository, CustomerRepository customerRepository, ExpenseRepository expenseRepository) {
         this.budgetRepository = budgetRepository;
         this.budgetCustomerRepository = budgetCustomerRepository;
-        this.expenseRepository = expenseRepository;
         this.alertRateRepository = alertRateRepository;
-    }
-
-    public boolean isAlertReached(Integer budgetId) {
-        BigDecimal totalExpenses = expenseRepository.getTotalExpensesByBudget(budgetId);
-        BigDecimal budgetAmount = budgetRepository.findBudgetAmountById(budgetId);
-        BigDecimal alertRate = alertRateRepository.findLatestRate();
-
-        if (totalExpenses != null && budgetAmount != null) {
-            BigDecimal alertThreshold = budgetAmount.multiply(alertRate);
-            return totalExpenses.compareTo(alertThreshold) >= 0;
-        }
-        return false;
-    }
-
-    public boolean isBudgetExceeded(Integer budgetId) {
-        BigDecimal totalExpenses = expenseRepository.getTotalExpensesByBudget(budgetId);
-        BigDecimal budgetAmount = budgetRepository.findBudgetAmountById(budgetId);
-
-        if (totalExpenses != null && budgetAmount != null) {
-            return totalExpenses.compareTo(budgetAmount) > 0;
-        }
-        return false;
+        this.customerRepository = customerRepository;
+        this.expenseRepository = expenseRepository;
     }
 
     public List<BudgetCustomer> getAllBudgets() {
@@ -75,13 +60,40 @@ public class BudgetService {
         return budgetRepository.findById(id).orElse(null);
     }
 
-    public BigDecimal getRemainingBudget(Integer budgetId) {
-        Budget budget = getBudgetById(budgetId);
-        if (budget == null) {
-            return BigDecimal.ZERO;
-        }
+    public BigDecimal getTotalBudgetCustomerById(Integer customerId) {
+        List<BudgetCustomer> budgets = budgetCustomerRepository.findByCustomerId(customerId);
+        return budgets.stream()
+                .map(BudgetCustomer::getBudget)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
 
-        BigDecimal totalExpense = expenseRepository.getTotalExpensesByBudget(budgetId);
-        return budget.getBudget().subtract(totalExpense);
+    public List<String> getAlertMessages() {
+        List<String> alertMessages = new ArrayList<>();
+        BigDecimal alertRate = alertRateRepository.findLatestRate();
+
+        List<Customer> customers = customerRepository.findAll();
+        for (Customer customer : customers) {
+            BigDecimal totalBudgetCustomer = getTotalBudgetCustomerById(customer.getCustomerId());
+            BigDecimal totalExpenses = getTotalExpensesByCustomerId(customer.getCustomerId());
+
+            System.out.println("======================================");
+            System.out.println(customer.getCustomerId());
+            System.out.println(alertRate);
+            System.out.println(totalBudgetCustomer);
+            System.out.println(totalExpenses);
+            System.out.println(totalExpenses.compareTo(totalBudgetCustomer.multiply(alertRate)));
+
+            if (totalExpenses.compareTo(totalBudgetCustomer.multiply(alertRate)) >= 0) {
+                alertMessages.add("Alert: Customer " + customer.getName() + " has reached the alert rate of their budget.");
+            }
+        }
+        return alertMessages;
+    }
+
+    public BigDecimal getTotalExpensesByCustomerId(Integer customerId) {
+        List<Expense> expenses = expenseRepository.findByCustomerId(customerId);
+        return expenses.stream()
+                .map(Expense::getAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 }
