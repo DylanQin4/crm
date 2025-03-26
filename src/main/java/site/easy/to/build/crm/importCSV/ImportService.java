@@ -83,6 +83,7 @@ public class ImportService {
         Expense d=new Expense();
         d.setTicketId(t.getTicketId());
         d.setLabel("depense ticket"+d.getLabel());
+        System.out.println(data3.getExpense());
         d.setAmount(parseDoubleToBigDecimal(data3.getExpense()));
         return depenseService.createExpense(d, true);
 

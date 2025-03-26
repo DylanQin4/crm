@@ -8,6 +8,8 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Data
 public class Data1 {
@@ -20,8 +22,8 @@ public class Data1 {
             return;
         }
 
-        if (!email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.(gmail\\.com|hotmail\\.com|yahoo\\.com|outlook\\.com|icloud\\.com|orange\\.fr|free\\.fr)$")) {
-            erreurs.add("Erreur ligne " + ligne + ": Email invalide (doit se terminer par @gmail.com, @hotmail.com, etc.) -> " + email);
+        if (!email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$")) {
+            erreurs.add("Erreur ligne " + ligne + ": Email invalide -> " + email);
         } else {
             this.customerEmail = email;
         }
@@ -41,6 +43,7 @@ public class Data1 {
 
     public static List<Data1> lireEtVerifierCsv(List<String> erreurs, File fichier) {
         List<Data1> donnees = new ArrayList<>();
+        Pattern pattern = Pattern.compile("(?:\"([^\"]*)\")|([^,]+)");
 
         try (BufferedReader br = new BufferedReader(new FileReader(fichier))) {
             String ligne;
@@ -52,19 +55,24 @@ public class Data1 {
                     continue;
                 }
 
-                String[] valeurs = ligne.split(",");
-                if (valeurs.length < 2) {
+                List<String> valeurs = new ArrayList<>();
+                Matcher matcher = pattern.matcher(ligne);
+                while (matcher.find()) {
+                    valeurs.add(matcher.group(1) != null ? matcher.group(1) : matcher.group(2));
+                }
+
+                if (valeurs.size() < 2) {
                     erreurs.add("Erreur ligne " + numeroLigne + ": Format invalide, colonnes manquantes");
                     continue;
                 }
 
                 Data1 data = new Data1();
-                data.setCustomerEmail(valeurs[0]);
-                data.setCustomerName(valeurs[1], erreurs, numeroLigne);
+                data.setCustomerEmail(valeurs.get(0), erreurs, numeroLigne);
+                data.setCustomerName(valeurs.get(1), erreurs, numeroLigne);
                 donnees.add(data);
             }
         } catch (IOException ioex) {
-            ioex.printStackTrace();
+            erreurs.add("Erreur lors de la lecture du fichier : " + ioex.getMessage());
         }
 
         return donnees;

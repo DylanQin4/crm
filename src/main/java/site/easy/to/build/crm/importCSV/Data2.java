@@ -8,6 +8,8 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Data
 public class Data2 {
@@ -16,7 +18,11 @@ public class Data2 {
 
     public void setBudget(String budget, List<String> erreurs, int ligne) {
         try {
-            this.budget = Double.parseDouble(budget);
+
+            String sanitizedExpense = budget.replace(",", ".");
+            System.out.println("STRING :"+budget);
+            System.out.println("DOUBLE :"+sanitizedExpense);
+            this.budget = Double.parseDouble(sanitizedExpense);
             if (this.budget < 0) {
                 erreurs.add("Erreur ligne " + ligne + ": Budget ne doit pas être négatif -> " + budget);
             }
@@ -30,8 +36,8 @@ public class Data2 {
             return;
         }
 
-        if (!email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.(gmail\\.com|hotmail\\.com|yahoo\\.com|outlook\\.com|icloud\\.com|orange\\.fr|free\\.fr)$")) {
-            erreurs.add("Erreur ligne " + ligne + ": Email invalide (doit se terminer par @gmail.com, @hotmail.com, etc.) -> " + email);
+        if (!email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$")) {
+            erreurs.add("Erreur ligne " + ligne + ": Email invalide -> " + email);
         } else {
             this.customerEmail = email;
         }
@@ -39,6 +45,7 @@ public class Data2 {
 
     public static List<Data2> lireEtVerifierCsv(List<String> erreurs, File fichier) {
         List<Data2> donnees = new ArrayList<>();
+        Pattern pattern = Pattern.compile("(?:\"([^\"]*)\")|([^,]+)"); // Gérer les valeurs entre guillemets
 
         try (BufferedReader br = new BufferedReader(new FileReader(fichier))) {
             String ligne;
@@ -50,21 +57,27 @@ public class Data2 {
                     continue;
                 }
 
-                String[] valeurs = ligne.split(",");
-                if (valeurs.length < 2) {
+                List<String> valeurs = new ArrayList<>();
+                Matcher matcher = pattern.matcher(ligne);
+                while (matcher.find()) {
+                    valeurs.add(matcher.group(1) != null ? matcher.group(1) : matcher.group(2));
+                }
+
+                if (valeurs.size() < 2) {
                     erreurs.add("Erreur ligne " + numeroLigne + ": Format invalide, colonnes manquantes");
                     continue;
                 }
 
                 Data2 data = new Data2();
-                data.setCustomerEmail(valeurs[0]);
-                data.setBudget(valeurs[1], erreurs, numeroLigne);
+                data.setCustomerEmail(valeurs.get(0));
+                data.setBudget(valeurs.get(1), erreurs, numeroLigne);
                 donnees.add(data);
             }
         } catch (IOException ioex) {
-            ioex.printStackTrace();
+            erreurs.add("Erreur lors de la lecture du fichier : " + ioex.getMessage());
         }
 
         return donnees;
     }
+
 }
