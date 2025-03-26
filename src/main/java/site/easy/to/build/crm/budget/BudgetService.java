@@ -34,8 +34,8 @@ public class BudgetService {
     }
 
     @Transactional
-    public void createBudget(Budget budget) {
-        budgetRepository.save(budget);
+    public Budget createBudget(Budget budget) {
+        return budgetRepository.save(budget);
     }
 
     @Transactional
