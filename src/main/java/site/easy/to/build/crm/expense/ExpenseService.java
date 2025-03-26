@@ -45,7 +45,7 @@ public class ExpenseService {
         }
     }
 
-    public void createExpense(Expense expense, boolean isConfirmed) {
+    public Expense createExpense(Expense expense, boolean isConfirmed) {
         // Check if this is an existing expense being updated
         boolean isUpdate = expense.getId() != null;
 
@@ -87,7 +87,7 @@ public class ExpenseService {
             throw new BudgetAlertException("The expense amount exceeds the customer's total budget. Please confirm to proceed.");
         }
 
-        expenseRepository.save(expense);
+        return expenseRepository.save(expense);
     }
 
     public BigDecimal getTotalExpensesByCustomerId(Integer customerId) {
